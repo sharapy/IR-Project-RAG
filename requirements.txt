@@ -1,11 +1,13 @@
 langchain
 langchain-groq
 langchain-community
-chromadb
+faiss-cpu
 sentence-transformers
 pypdf
+pymupdf
 python-dotenv
 pdfminer
 langchain-huggingface
 sentence-transformers
 langchain_experimental
+langchain-classic
