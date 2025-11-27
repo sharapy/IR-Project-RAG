@@ -11,3 +11,5 @@ langchain-huggingface
 sentence-transformers
 langchain_experimental
 langchain-classic
+langchain-ollama
+pandas
