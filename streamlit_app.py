@@ -197,12 +197,23 @@ def main():
                 history_str = "\n\n".join(history_entries)
 
                 # Call RAG chain with question + history
-                answer = st.session_state.rag_system.invoke(
-                    {
-                        "question": question,
-                        "history": history_str,
-                    }
-                )
+                # answer = st.session_state.rag_system.invoke(
+                #     {
+                #         "question": question,
+                #         "history": history_str,
+                #     }
+                # )
+
+                def stream_answer(question: str, history_str: str):
+                    for chunk in st.session_state.rag_system.stream(
+                        {"question": question, "history": history_str}
+                    ):
+                        yield chunk
+
+                st.markdown("### 💡 Answer")
+                answer = st.write_stream(stream_answer(question, history_str))
+
+
                 # retriever = st.session_state.retriever
                 # retrieved_docs = retriever.invoke(question)
                 llm = OllamaLLM(model=os.getenv("LLM_MODEL", "llama3"))
@@ -222,19 +233,9 @@ def main():
                 })
                 
                 # Display answer
-                st.markdown("### 💡 Answer")
-                # st.success(result['answer'])
-                st.success(answer)
+                # st.markdown("### 💡 Answer")
+                # st.success(answer)
                 
-                # # Show retrieved docs in expander
-                # with st.expander("📄 Source Documents"):
-                #     for i, doc in enumerate(result['retrieved_docs'], 1):
-                #         st.text_area(
-                #             f"Document {i}",
-                #             doc.page_content[:300] + "...",
-                #             height=100,
-                #             disabled=True
-                #         )
                 
                 st.markdown("### 📚 Sources")
                 if retrieved_docs:
