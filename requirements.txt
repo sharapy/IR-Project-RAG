@@ -13,3 +13,6 @@ langchain_experimental
 langchain-classic
 langchain-ollama
 pandas
+langgraph
+pydantic
+streamlit
