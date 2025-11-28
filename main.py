@@ -1,5 +1,6 @@
 """Main application entry point for RAG system"""
-
+# This main file will not be used as Ollama doesnt work with Graph Builder
+# Application can only be run from streamlit, keeping this for future use. 
 import sys
 from pathlib import Path
 from langchain_ollama.llms import OllamaLLM

@@ -60,9 +60,9 @@ def initialize_rag():
         # Process documents
         processed_chunks = processor.process_docs(os.getenv("DATA_DIR")+"/pdf/")
         # Create vector store
-        # processor.create_update_vectorstore(processed_chunks)
-        vectorstore = processor.create_update_vectorstore(processed_chunks)
-        retriever=processor.get_retriever()
+        processor.create_update_vectorstore(processed_chunks)
+        # vectorstore = processor.create_update_vectorstore(processed_chunks)
+        retriever=processor.get_retriever(k=4)
         
         # Build graph
     #     graph_builder = GraphBuilder(
@@ -75,7 +75,10 @@ def initialize_rag():
     #     st.error(f"Failed to initialize: {str(e)}")
     #     return None, 0
             # Build simple rag chain as a runnable pipeline
-        simple_prompt = ChatPromptTemplate.from_template("""Answer the question based only on the following context:
+        simple_prompt = ChatPromptTemplate.from_template("""You are a helpful assistant. Use the conversation history and the context to answer the question.:
+
+Conversation history:{history}
+
 Context: {context}
 
 Question: {question}
@@ -83,8 +86,11 @@ Question: {question}
 Answer:""")
         simple_rag_chain = (
             RunnablePassthrough()  # Input: {"question": "query"}
-            | {"context": lambda x: retriever | format_documents | (lambda docs: format_documents(docs))(x["question"]),
-                "question": lambda x: x["question"]}
+            # Build context by calling the retriever and formatting the returned docs into a string
+            | {"context": lambda x: format_documents(retriever.invoke(x["question"])),
+               "question": lambda x: x["question"],
+               "history": lambda x: x.get("history", "")
+            }
             | simple_prompt
             | llm
             | StrOutputParser()
@@ -99,9 +105,30 @@ Answer:""")
 def format_documents(docs):
     formatted = []
     for i, doc in enumerate(docs):
-        source = doc.metadata.get("source_file", "Unknown")
-        formatted.append(f"Document {i+1} (Source: {source}):\n{doc.page_content}")
+        # If the retriever returned plain strings, doc will be a str
+        if isinstance(doc, str):
+            source = "Unknown"
+            content = doc
+        else:
+            # Fallback safely if attributes are missing
+            metadata = getattr(doc, "metadata", {}) or {}
+            source = metadata.get("source_file", "Unknown")
+            content = getattr(doc, "page_content", str(doc))
+
+        formatted.append(f"Document {i+1} (Source: {source}):\n{content}")
     return "\n\n".join(formatted)
+
+def expand_query_with_llm(user_query: str, llm: OllamaLLM) -> str:
+    prompt = f"""Rewrite the following user question to be a clear, specific search query for a document retrieval system. 
+Keep the same intent but make it more explicit and detailed if needed.
+
+User question:
+\"\"\"{user_query}\"\"\"
+
+Rewritten search query:"""
+    expanded = llm.invoke(prompt)
+    print(expanded)
+    return str(expanded).strip()
 
 def main():
     """Main application"""
@@ -110,6 +137,30 @@ def main():
     # Title
     st.title("🤖📚 RAG Document Search")
     st.markdown("Ask questions about the loaded documents")
+
+    # Reload button: clears cached resources and forces re-initialization
+    if st.button("🔁 Reload documents"):
+        # Clear cached resources created by @st.cache_resource
+        try:
+            st.cache_resource.clear()
+        except Exception:
+            # Older Streamlit versions may not have cache_resource; try clearing all cache
+            try:
+                st.legacy_caching.clear_cache()
+            except Exception:
+                pass
+
+        # Reset session state and rerun the app so initialize_rag() runs again
+        st.session_state.initialized = False
+        st.session_state.rag_system = None
+        st.session_state.retriever = None
+        # st.session_state.history = []
+        # experimental_rerun may not exist on all Streamlit versions; fall back to st.stop()
+        try:
+            st.rerun()
+        except AttributeError:
+            # st.stop() will halt this run; Streamlit will rerun on the next interaction
+            st.stop()
     
     # Initialize system
     if not st.session_state.initialized:
@@ -139,9 +190,25 @@ def main():
                 
                 # Get answer
                 # result = st.session_state.rag_system.run(question)
-                answer = st.session_state.rag_system.invoke({"question": question})
+                # answer = st.session_state.rag_system.invoke({"question": question})
+                history_entries = []
+                for h in st.session_state.history[-5:]:  # last 5 exchanges
+                    history_entries.append(f"User: {h['question']}\nAssistant: {h['answer']}")
+                history_str = "\n\n".join(history_entries)
+
+                # Call RAG chain with question + history
+                answer = st.session_state.rag_system.invoke(
+                    {
+                        "question": question,
+                        "history": history_str,
+                    }
+                )
                 # retriever = st.session_state.retriever
                 # retrieved_docs = retriever.invoke(question)
+                llm = OllamaLLM(model=os.getenv("LLM_MODEL", "llama3"))
+                # expanded_query = expand_query_with_llm(question, llm)
+                # retrieved_docs = st.session_state.retriever.invoke(expanded_query)
+
                 retrieved_docs = st.session_state.retriever.invoke(question)
                 
                 elapsed_time = time.time() - start_time
@@ -174,8 +241,16 @@ def main():
                     cols = st.columns(min(3, len(retrieved_docs)))  # Max 3 columns
                     for i, (col, doc) in enumerate(zip(cols, retrieved_docs)):
                         with col:
-                            st.markdown(f"**Doc {i+1}:** {doc.metadata.get('source_file', 'Unknown')}")
-                            st.caption(doc.page_content[:150] + "...")
+                            # Handle both Document objects and plain strings
+                            if isinstance(doc, str):
+                                source = "Unknown"
+                                snippet = doc[:150] + "..."
+                            else:
+                                source = doc.metadata.get("source_file", "Unknown")
+                                snippet = doc.page_content[:150] + "..."
+
+                            st.markdown(f"**Doc {i+1}:** {source}")
+                            st.caption(snippet)
                 else:
                     st.warning("No documents retrieved")
                 

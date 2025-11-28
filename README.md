@@ -48,3 +48,18 @@
     ```
 
 Your environment is now set up and ready for the RAG project.
+
+To run the application, llama3 must be installed on your system. Follow the instructions in the llama3 repository to set it up.
+
+Run ollama3 server:
+```bash
+ollama run llama3
+```
+
+To start the RAG application, execute:
+```bash
+streamlit run streamlit_app.py
+```
+This starts the Streamlit application, allowing you to interact with the RAG system through a web interface.
+
+To update files (PDF, TXT), place them in the `data` folder and hit `Reload documents` button in the Streamlit app to refresh the document embeddings.

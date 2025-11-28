@@ -121,7 +121,7 @@ class DocProcessor:
         """
         # save_dir = os.getenv("VECTORSTORE_DIR")
         print(save_dir)
-        if os.path.exists(save_dir):
+        if os.path.exists(save_dir) and os.path.isdir(save_dir):
             # print(f"Loading existing vectorstore from '{save_dir}'")
             # self.vectorstore = FAISS.load_local(save_dir, self.embedding, allow_dangerous_deserialization=True)
             # print(f"Adding {len(chunks)} new chunks to existing vectorstore")
@@ -130,11 +130,11 @@ class DocProcessor:
             # Since deduplication is not present at the moment, will recreate store 
             shutil.rmtree(save_dir)
             self.vectorstore = FAISS.from_documents(chunks, self.embedding)
-        else:
-            print("Creating new vectorstore from chunks")
-            self.vectorstore = FAISS.from_documents(chunks, self.embedding)
+        
+        print("Creating new vectorstore from chunks")
+        self.vectorstore = FAISS.from_documents(chunks, self.embedding)
             
-        self.retriever = self.vectorstore.as_retriever()
+        # self.retriever = self.vectorstore.as_retriever()
         self.vectorstore.save_local(save_dir)
         print(f"Vectorstore saved to '{save_dir}' with total {self.vectorstore.index.ntotal} vectors")
         return self.vectorstore
@@ -152,8 +152,8 @@ class DocProcessor:
         """
         if self.vectorstore is None:
             raise ValueError("Vector store not initialized. Call create_vectorstore first.")
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": k})
-        return self.retriever
+        return self.vectorstore.as_retriever(search_kwargs={"k": k})
+        
     
     def retrieve(self, query: str, k: int = 4) -> List[Document]:
         """
@@ -174,5 +174,10 @@ class DocProcessor:
 #     processor.create_update_vectorstore(processed_chunks)
     
 #     docs = processor.retrieve("Bike Security?", k=3)
-#     for d in docs:
-#         print(d.metadata.get("source_file"), "->", d.page_content[:200])
+#     # for d in docs:
+#     #     print(d.metadata.get("source_file"), "->", d.page_content[:200])
+#     formatted = []
+#     for i, doc in enumerate(docs):
+#         source = doc.metadata.get("source_file", "Unknown")
+#         formatted.append(f"Document {i+1} (Source: {source}):\n{doc.page_content}")
+#     print("\n\n".join(formatted))
