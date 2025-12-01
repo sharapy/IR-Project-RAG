@@ -6,6 +6,15 @@ We use local deployment of language models (like LLaMA 3) and vector databases (
 
 All the documents are stored and processed locally, and no data is sent to external servers, making this solution suitable for users with strict privacy requirements. The PDF and text files are ingested, and their embeddings are created using local models, the files will be stored in "data" folder from here the files will be read and processed.
 
+## Running the application
+You need to rung the ollama3 server to run the application.
+`` ollama run llama3 ``
+
+Then run the streamlit application:
+`` streamlit run streamlit_app.py ``
+
+Enter the query in the input box and hit enter to get the response from the RAG system. History of the conversation is maintained and displayed on the bottome of the screen. After genererating the response, the source documents used to generate the response are also cited below the answer.
+
 ## Environment Setup
 
 1. **Install Python 3.13**  
