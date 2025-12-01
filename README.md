@@ -1,4 +1,10 @@
-# Setting Up the Environment for RAG Project
+# Robust Privacy-Preserving RAG System for Personal Documents
+
+This project implements a Retrieval-Augmented Generation (RAG) system designed to securely handle and query personal documents. It leverages advanced language models and vector databases to provide accurate and context-aware responses while ensuring data privacy.
+
+We use local deployment of language models (like LLaMA 3) and vector databases (like FAISS) to avoid reliance on external APIs, ensuring that sensitive information remains on the user's device.
+
+All the documents are stored and processed locally, and no data is sent to external servers, making this solution suitable for users with strict privacy requirements. The PDF and text files are ingested, and their embeddings are created using local models, the files will be stored in "data" folder from here the files will be read and processed.
 
 ## Environment Setup
 
