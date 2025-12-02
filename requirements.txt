@@ -1,5 +1,6 @@
 langchain
 langchain-groq
+langchain-chroma
 langchain-community
 faiss-cpu
 sentence-transformers

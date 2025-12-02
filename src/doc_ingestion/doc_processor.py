@@ -7,6 +7,7 @@ HuggingFace Embedding using given FAISS vectorstore
 The embeddings will need internet connection on first go, as with other setup. 
 """
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.document_loaders import (
     TextLoader, 
     PyPDFDirectoryLoader,
@@ -14,7 +15,9 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import List, Union
 from pathlib import Path
 import os, shutil
@@ -29,9 +32,16 @@ class DocProcessor:
     def __init__(self):
         """Initialize with embedding model for semantic chunking"""
         self.data_dir = os.getenv("DATA_DIR", "data")
-        self.embedding_model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        self.embedding = HuggingFaceEmbeddings(model_name=self.embedding_model)
-        self.chunker = SemanticChunker(self.embedding)
+        # self.embedding_model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        self.embedding_model = os.getenv("EMBEDDING_MODEL", "mxbai-embed-large")
+        # self.embedding = HuggingFaceEmbeddings(model_name=self.embedding_model)
+        self.embedding = OllamaEmbeddings(model=self.embedding_model)
+        # self.chunker = SemanticChunker(self.embedding) # disabled as semantic chunker is slow when corpora increases
+        self.chunker = RecursiveCharacterTextSplitter(
+                            chunk_size=1500,
+                            chunk_overlap=300,
+                            separators=["\n\n", "\n", ".", " "],
+                        )
         self.vectorstore = None
         self.retriever = None
 
@@ -108,7 +118,7 @@ class DocProcessor:
         print("=== Document processing complete ===")
         return chunks
     
-    def create_update_vectorstore(self, chunks: List[Document], save_dir: str = "../../faiss_vectorstore") -> FAISS:
+    def create_update_vectorstore_faiss(self, chunks: List[Document], save_dir: str = "../../faiss_vectorstore") -> FAISS:
         """
         Create or update a FAISS vector store with new chunks.
         If a vectorstore exists in save_dir, load it and add new chunks,
@@ -139,6 +149,40 @@ class DocProcessor:
         print(f"Vectorstore saved to '{save_dir}' with total {self.vectorstore.index.ntotal} vectors")
         return self.vectorstore
 
+    def create_update_vectorstore(
+        self,
+        chunks: List[Document],
+        save_dir: str = "chroma_vectorstore",
+        collection_name: str = "rag_collection",
+    ) -> Chroma:
+        """
+        Create or update a Chroma vector store with new chunks.
+        If a vectorstore exists in save_dir, delete and recreate it (no dedup).
+        Otherwise create a new vectorstore from chunks.
+        """
+        persist_dir = os.path.abspath(save_dir)
+        print(persist_dir)
+
+        if os.path.exists(persist_dir) and os.path.isdir(persist_dir):
+            print("Loading existing Chroma store")
+            self.vectorstore = Chroma(
+                embedding_function=self.embedding,
+                collection_name=collection_name,
+                persist_directory=persist_dir,
+            )
+            print(f"Adding {len(chunks)} new chunks")
+            self.vectorstore.add_documents(chunks)
+        else:
+            print("Creating new Chroma vectorstore from chunks")
+            self.vectorstore = Chroma.from_documents(
+                documents=chunks,
+                embedding=self.embedding,
+                collection_name=collection_name,
+                persist_directory=persist_dir,
+            )
+        print(f"Chroma vectorstore saved to '{persist_dir}'")
+        return self.vectorstore
+    
     def _clean_text(self, text: str) -> str:
         # if process_pdf from ipynb is used for metadata
         text = " ".join(text.split())
