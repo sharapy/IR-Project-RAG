@@ -13,7 +13,7 @@ load_dotenv()
 sys.path.append(str(Path(__file__).parent))
 
 from src.doc_ingestion.doc_processor import DocProcessor
-from src.graph_builder.graph_builder import GraphBuilder
+#from src.graph_builder.graph_builder import GraphBuilder
 
 class RAGAPP:
     """Main RAG application"""

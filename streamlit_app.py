@@ -16,10 +16,9 @@ load_dotenv()
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent))
-
-# from src.config.config import Config
 from src.doc_ingestion.doc_processor import DocProcessor
-from src.graph_builder.graph_builder import GraphBuilder
+# Graph can be added once local llm model supports it. 
+#from src.graph_builder.graph_builder import GraphBuilder
 
 # Page configuration
 st.set_page_config(
@@ -58,24 +57,16 @@ def initialize_rag():
         # llm = ChatOllama(model=os.getenv("LLM_MODEL", "llama3"))
         processor = DocProcessor()        
         # Process documents
-        processed_chunks = processor.process_docs(os.getenv("DATA_DIR")+"/pdf/")
+        processed_chunks = processor.process_docs(os.getenv("DATA_DIR"))
         # Create vector store
         processor.create_update_vectorstore(processed_chunks)
         # vectorstore = processor.create_update_vectorstore(processed_chunks)
         retriever=processor.get_retriever(k=4)
         
-        # Build graph
-    #     graph_builder = GraphBuilder(
-    #         retriever=processor.get_retriever(),
-    #         llm=llm
-    #     )
-    #     graph_builder.build()
-    #     return graph_builder, len(processed_chunks)
-    # except Exception as e:
-    #     st.error(f"Failed to initialize: {str(e)}")
-    #     return None, 0
-            # Build simple rag chain as a runnable pipeline
-        simple_prompt = ChatPromptTemplate.from_template("""You are a helpful assistant. Use the conversation history and the context to answer the question.:
+        simple_prompt = ChatPromptTemplate.from_template(
+            """You are a helpful assistant. 
+            Use the conversation history only if needed and the context to answer the question.
+            If you do not find any document match provide a generalized answer and say you dont know the exact answer:
 
 Conversation history:{history}
 
@@ -135,7 +126,7 @@ def main():
     init_session_state()
     
     # Title
-    st.title("🤖📚 RAG Document Search")
+    st.title("🤖📚 Personal-RAG Document Search")
     st.markdown("Ask questions about the loaded documents")
 
     # Reload button: clears cached resources and forces re-initialization
