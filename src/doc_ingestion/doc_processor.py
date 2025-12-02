@@ -118,36 +118,36 @@ class DocProcessor:
         print("=== Document processing complete ===")
         return chunks
     
-    # def create_update_vectorstore(self, chunks: List[Document], save_dir: str = "../../faiss_vectorstore") -> FAISS:
-    #     """
-    #     Create or update a FAISS vector store with new chunks.
-    #     If a vectorstore exists in save_dir, load it and add new chunks,
-    #     otherwise create a new vectorstore from chunks.
-    #     Args:
-    #         chunks: List of Document chunks to add.
-    #         save_dir: Directory path to save/load vectorstore.
-    #     Returns:
-    #         FAISS vectorstore instance.
-    #     """
-    #     # save_dir = os.getenv("VECTORSTORE_DIR")
-    #     print(save_dir)
-    #     if os.path.exists(save_dir) and os.path.isdir(save_dir):
-    #         # print(f"Loading existing vectorstore from '{save_dir}'")
-    #         # self.vectorstore = FAISS.load_local(save_dir, self.embedding, allow_dangerous_deserialization=True)
-    #         # print(f"Adding {len(chunks)} new chunks to existing vectorstore")
-    #         # self.vectorstore.add_documents(chunks)
+    def create_update_vectorstore_faiss(self, chunks: List[Document], save_dir: str = "../../faiss_vectorstore") -> FAISS:
+        """
+        Create or update a FAISS vector store with new chunks.
+        If a vectorstore exists in save_dir, load it and add new chunks,
+        otherwise create a new vectorstore from chunks.
+        Args:
+            chunks: List of Document chunks to add.
+            save_dir: Directory path to save/load vectorstore.
+        Returns:
+            FAISS vectorstore instance.
+        """
+        # save_dir = os.getenv("VECTORSTORE_DIR")
+        print(save_dir)
+        if os.path.exists(save_dir) and os.path.isdir(save_dir):
+            # print(f"Loading existing vectorstore from '{save_dir}'")
+            # self.vectorstore = FAISS.load_local(save_dir, self.embedding, allow_dangerous_deserialization=True)
+            # print(f"Adding {len(chunks)} new chunks to existing vectorstore")
+            # self.vectorstore.add_documents(chunks)
 
-    #         # Since deduplication is not present at the moment, will recreate store 
-    #         shutil.rmtree(save_dir)
-    #         self.vectorstore = FAISS.from_documents(chunks, self.embedding)
+            # Since deduplication is not present at the moment, will recreate store 
+            shutil.rmtree(save_dir)
+            self.vectorstore = FAISS.from_documents(chunks, self.embedding)
         
-    #     print("Creating new vectorstore from chunks")
-    #     self.vectorstore = FAISS.from_documents(chunks, self.embedding)
+        print("Creating new vectorstore from chunks")
+        self.vectorstore = FAISS.from_documents(chunks, self.embedding)
             
-    #     # self.retriever = self.vectorstore.as_retriever()
-    #     self.vectorstore.save_local(save_dir)
-    #     print(f"Vectorstore saved to '{save_dir}' with total {self.vectorstore.index.ntotal} vectors")
-    #     return self.vectorstore
+        # self.retriever = self.vectorstore.as_retriever()
+        self.vectorstore.save_local(save_dir)
+        print(f"Vectorstore saved to '{save_dir}' with total {self.vectorstore.index.ntotal} vectors")
+        return self.vectorstore
 
     def create_update_vectorstore(
         self,
